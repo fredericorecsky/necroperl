@@ -1,0 +1,108 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Cwd qw/abs_path cwd getcwd/;
+use File::Basename;
+
+BEGIN {
+    my $abs_path = dirname( dirname ( abs_path( $0 ) ) );
+    push @INC, $abs_path . "/lib";
+}
+
+use Getopt::Long;
+use Necromancer;
+use Term::ANSIColor;
+
+my %local_port;
+my ( $jump_host, $remote_host, $remote_port, $remote_command, $alias, $list );
+
+GetOptions ( 
+    "jump_host=s"   => \$jump_host,
+    "host=s"        => \$remote_host,
+    "port=s"        => \$remote_port,
+    "alias=s"       => \$alias,
+    "list"          => \$list,
+);
+
+my $necro = Necromancer->new();
+load_tunnels();
+list() if $list;
+
+die "jump_host, host and port are required arguments\n" 
+    if !( $jump_host && $remote_port && $remote_host );
+
+
+$necro->check_host( $jump_host );
+
+
+my $count = 0;
+my $rand_port;
+while ( 1 ) {
+    $rand_port = (int rand(10000) + 2000 );
+    if (! exists $local_port{ $rand_port } ){
+        last;
+    }
+    $count++;
+    die "Could not find a free port\n" if $count > 10;
+}
+
+fork and exit;
+
+open my $fh, ">>", $necro->{ cfg_dev_tunnels } or die;
+
+    print $fh join "\t", $rand_port, $remote_host, $remote_port, $jump_host, $$, $alias;
+    print $fh "\n";
+
+close $fh; 
+
+#my @cmd = ( 'ssh','-f','-N','-L', "$rand_port\:$remote_host\:$remote_port", $jump_host );
+my $cmd = "ssh -N -L $rand_port\:$remote_host\:$remote_port $jump_host";
+#my $cmd = "sleep 60";
+
+print "$$\n";
+exec $cmd;
+
+
+sub load_tunnels {
+    open my $fh , "<" , $necro->{ cfg_dev_tunnels } or die "$necro->{ cfg_dev_tunnels }, $!, $@ \n";
+        while ( my $line = <$fh> ) {
+            chomp $line;
+            my ( $local_port, $hostname, $remote_port, $jump_host, $pid, $alias ) = split( /\t/, $line );
+            $local_port{ $local_port } = {
+                host => $hostname,
+                remote_port => $remote_port,
+                jump_host => $jump_host,
+                pid => $pid,
+                alias => $alias || " ",
+            };
+        }
+    close $fh;
+}
+
+sub list {
+        print join "\t", qw/
+            port
+            hostname
+            port
+            pid
+            alias
+        /, "\n";
+        for my $port ( keys %local_port ) {
+            my $status = "\x{2580}";
+            if ( kill 0, $local_port{ $port }{ pid } ) {
+                print color( 'rgb335' );
+            }else{
+                print color( 'rgb533' );
+            }
+            print join "\t", $port,
+                             $local_port{ $port }{ host },
+                             $local_port{ $port }{ remote_port },
+                             $local_port{ $port }{ pid },
+                             $local_port{ $port }{ alias };
+            print color( 'reset' );
+            print "\n";
+        }
+        exit;
+}

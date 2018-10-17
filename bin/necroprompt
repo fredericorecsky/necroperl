@@ -1,0 +1,106 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Cwd qw/abs_path cwd getcwd/;
+use File::Basename;
+
+BEGIN {
+    my $abs_path = dirname( dirname ( abs_path( $0 ) ) );
+    push @INC, $abs_path . "/lib";
+}
+
+use Cwd;
+use File::Basename;
+use Necromancer;
+use Term::ANSIColor;
+use Sys::Hostname;
+
+$| = 1;
+
+binmode(STDOUT, ":utf8");
+
+my ( $status ) = @ARGV;
+
+my $necro = Necromancer->new();
+
+status();
+host_dir();
+git_info();
+rperl();
+print "\n";
+print "\x{2605} :"; # does not work for some fonts
+
+sub status { 
+    print "[";
+    if ( $status ) {
+        #print color( 'red' );
+        print color( 'rgb511' );
+        #print " \x{1f615} "; # does not work for some fonts
+        print "\x{2580}"; # does not work for some fonts
+        print "$status";
+    }else{
+        #print color( 'green' );
+        print color( 'rgb353' );
+        #print "\x{270C}"; # does not work for some fonts
+        print "\x{2580}"; # does not work for some fonts
+        print " ok ";
+    }
+    print color('reset' );
+    print "]"
+}
+
+sub host_dir {
+    my $hostname = hostname();
+    my $cwd = getcwd();
+    my $ssh = ( $ENV{SSH_CLIENT} || $ENV{ SSH_TTY } ) ? 1 : 0;
+    print "[";
+    $ssh ? print color( 'on_blue' ) : print color( 'rgb335' );
+    print $hostname . ":";
+    print color( 'reset' );
+    if ( $cwd =~ /^$ENV{ HOME }(.*)/ ) {
+        print "~$1";
+    }else{
+        print $cwd;
+    }
+    print "]";
+}
+
+sub git_info {
+    my $git_toplevel = `git rev-parse --show-toplevel 2>/dev/null`;
+    if ( !$? ){
+        my ( $git_branch ) = `git rev-parse --abbrev-ref HEAD`; 
+        $git_branch =~ s/\*\s+//;
+        chomp $git_branch;
+        my @remotes = `git remote -v`;
+        my $origin;
+        for my $remote ( @remotes ) {
+            my ( $name, $server ) = split ( /\s/, $remote );
+            $origin = basename $server;
+        }
+        print "[";
+        print color( 'magenta' );
+        print $origin ? "$origin:" : ":" ;
+        print color( 'cyan' );
+        print "$git_branch";
+        print color( 'reset' );
+        print "]";
+    }
+}
+
+# TODO move to rperl
+sub rperl {
+    if ( $necro->{ remote } ) {
+        print "[@";
+        print color( 'rgb335' );
+        print $necro->{ remote };
+        print color( 'reset' );
+        print "]";
+    }else{
+        print "[@]";
+    }
+}
+
+
+

@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Cwd qw/abs_path cwd getcwd/;
+use File::Basename;
+use Getopt::Long qw/:config pass_through/;
+
+BEGIN {
+    my $abs_path = dirname( dirname ( abs_path( $0 ) ) );
+    push @INC, $abs_path . "/lib";
+}
+
+use Necromancer;
+
+$| = 1;
+
+my $options;
+my @run_actions;
+
+GetOptions( 
+    "file=s"        => \$options->{ file },
+    "config"        => \&enqueue_action,
+    "host=s"        => \&enqueue_action,
+    "remote_dir:s"  => \&enqueue_action,
+    "dep"           => \&enqueue_action,
+    "alldep"        => \&enqueue_action,
+    "changed"       => \&enqueue_action,
+    "remote"        => \&enqueue_action,
+    "slurp"         => \&enqueue_action,
+    "run"           => \&enqueue_action,
+    "help"          => \&enqueue_action,
+    '<>'            => \&generic_parameters,
+);
+
+
+my $necro = Necromancer->new( $options );
+push @run_actions, "rperl" if !@run_actions;
+
+use Data::Dumper;
+print Dumper \@run_actions;
+print Dumper $necro;
+
+for my $action ( @run_actions ) {
+    print "[$action]\n";
+    $necro->$action();
+}
+
+sub enqueue_action {
+    my ( $getopt, $value ) = @_;
+
+    if ( $getopt->{ name } ) {
+        push @run_actions, $getopt->{ name };
+    }
+
+    if ( $getopt->{ name } eq "host" ){
+        $options->{ remote } = $value;
+    }
+    if ( $getopt->{ name } eq "remote_dir" ){
+        $options->{ remote_dir } = $value;
+    }
+}
+
+sub generic_parameters {
+    print Dumper \@_;
+    push @{ $options->{ remote_args } }, $_[0];
+    print Dumper $necro;
+}
+
