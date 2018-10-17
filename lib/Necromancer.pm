@@ -6,6 +6,7 @@ use warnings;
 use Cwd qw/abs_path cwd getcwd/;
 use Data::Dumper;
 use File::Basename;
+use IPC::Open3;
 use IO::Select;
 use Module::CoreList;
 use Module::ScanDeps;
@@ -64,7 +65,6 @@ sub new {
         #remote              => undef,
         args                => [ @ARGV ],
         debug               => 0,
-        perl                => "perl",
         dependencies        => [],
         localhost           => hostname(),
         action              => "rperl",
@@ -80,6 +80,8 @@ sub new {
         mkdir $self->{ config_dir } 
             or die "necroperl config directory does not exist and can't be created\n";
     }
+
+    $self->{ perl } ||= "perl";
 
     $self->_input_file;
     $self->_remote_dir;
@@ -131,8 +133,12 @@ sub _remote_dir {
     $self->_load_cfg( 'remote_dir', 'cfg_remote_dir' );
 }
 
+
+# todo remote dir and host
 sub _set_remote_dir {
     my ( $self ) = @_;
+
+    $DB::single = 1;
 
     $self->host();
 
@@ -143,7 +149,17 @@ sub _set_remote_dir {
             'ssh', $self->{ remote }, 'cd', $self->{ remote_dir },
         );
 
+        my ( $status ) = $self->execute( @cmd );
+        if ( $status ) {
+            die "[$status] Remote Directory $self->{ remote_dir } does not exists";
+        }
+        open my $fh, ">", $self->{ cfg_remote_dir } or die;
+            print $fh $self->{ remote_dir };
+        close $fh;
     }
+    undef $self->{ remote_dir };
+    $self->_remote_dir;
+    print "Set remote_dir to $self->{ remote_dir }\n";
 }
 
 
@@ -363,12 +379,17 @@ sub rperl {
 
     my @cmd = (
         'ssh', $self->{ remote }, 
-        'echo -n "Remote Shell PID:";',
         'export RPERL_PID=$$;', 
-        'echo $RPERL_PID;',
+        ( $self->{ verbose } ? (
+                'echo -n "Remote Shell PID:";',
+                'echo $RPERL_PID;',
+            ) : (
+                'echo -n;'
+            )
+        ),
         "export PERL5LIB=$self->{ run_path }/lib:\$PERL5LIB ;", 
         'cd', $self->{ run_path }, ';',
-        $self->{ perl }, @{ $self->{ args } }, ';', 
+        $self->{ perl }, $self->{ file },  @{ $self->{ remote_args } }, ';', 
         'pgrep -P $RPERL_PID;',
         'echo',
         );
@@ -380,8 +401,6 @@ sub rperl {
         print "Error $status when running $self->{ file }\n";
         print join " ", @cmd, "\n";
     }
-
-
 }
 
 sub help {
