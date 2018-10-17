@@ -29,21 +29,27 @@ GetOptions(
     "changed"       => \&enqueue_action,
     "remote"        => \&enqueue_action,
     "slurp"         => \&enqueue_action,
-    "run"           => \&enqueue_action,
+    "perl=s"        => \$options->{ perl },
     "help"          => \&enqueue_action,
+    "verbose"       => \$options->{ verbose },
+    "name"          => \$options->{ verbose },
     '<>'            => \&generic_parameters,
 );
+
+use Data::Dumper;
+
+if ( @ARGV ) {
+    #print Dumper \@ARGV;
+    shift @ARGV if $ARGV[0] eq "--";
+    push @{ $options->{ remote_args } }, @ARGV;
+}
 
 
 my $necro = Necromancer->new( $options );
 push @run_actions, "rperl" if !@run_actions;
 
-use Data::Dumper;
-print Dumper \@run_actions;
-print Dumper $necro;
-
 for my $action ( @run_actions ) {
-    print "[$action]\n";
+    print "[$action]\n" if $necro->{ verbose };
     $necro->$action();
 }
 
@@ -63,8 +69,6 @@ sub enqueue_action {
 }
 
 sub generic_parameters {
-    print Dumper \@_;
     push @{ $options->{ remote_args } }, $_[0];
-    print Dumper $necro;
 }
 
