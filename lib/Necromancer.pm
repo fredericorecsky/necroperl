@@ -130,16 +130,16 @@ sub _input_file {
 
 sub _remote_dir {
     my ( $self )  = @_;
-    $self->_load_cfg( 'remote_dir', 'cfg_remote_dir' );
+    if ( ! defined $self->{ remote_dir } ) {
+        $self->_load_cfg( 'remote_dir', 'cfg_remote_dir' );
+    }
 }
 
 
 # todo remote dir and host
 sub _set_remote_dir {
     my ( $self ) = @_;
-
-    $DB::single = 1;
-
+    
     $self->host();
 
     if ( ! defined $self->{ remote_dir } ){
@@ -192,15 +192,17 @@ sub _git_top_level {
         warn "there is not .fperl_git_file\n" if ! -e "$self->{ git_tree }/.fperl_git";
     }
 
-    if ( $self->{ remote_dir } ) {
+    if ( $self->{ remote_dir } && $self->{ file } ) {
         $self->{ run_path } =
             $self->{ remote_dir } .
             substr(
-                $self->{ cwd },
+                dirname( $self->{ file_abs_path } ),
                 length( dirname( $self->{ git_tree } )),
             );
+        $self->{ run_file } = basename( $self->{ file } );
     }else{
         $self->{ run_path } = $self->{ cwd };
+        $self->{ run_file } = $self->{ file };
     }
 
     chdir $self->{ cwd };
@@ -299,9 +301,11 @@ sub config {
 
 # check host
 sub host {
-    my ( $self ) = @_;
+    my ( $self, $remote ) = @_;
 
-    $DB::single = 1;
+    if ( ! $self->{ remote } && $remote ) {
+        $self->{ remote } = $remote;
+    }
 
     if ( $self->{ remote } && $self->check_host( $self->{ remote } ) ) {
         open my $fh, ">", $self->{ cfg_remote_host } or die "$@\n";
@@ -365,7 +369,8 @@ sub changed {
 
 sub remote {} #deprecated
 sub slurp {} # deprecated
-sub run {} #deprecated
+
+sub run { rperl( @_ ) }
 
 sub rperl {
     my ( $self ) = @_;
@@ -389,7 +394,7 @@ sub rperl {
         ),
         "export PERL5LIB=$self->{ run_path }/lib:\$PERL5LIB ;", 
         'cd', $self->{ run_path }, ';',
-        $self->{ perl }, $self->{ file },  @{ $self->{ remote_args } }, ';', 
+        $self->{ perl }, $self->{ run_file },  @{ $self->{ remote_args } }, ';', 
         'pgrep -P $RPERL_PID;',
         'echo',
         );
@@ -449,5 +454,26 @@ sub execute {
 
     return (( $? >> 8 ), $stdout, $stderr );
 }
+
+
+sub load_tunnels {
+    my ( $self ) = @_;
+    open my $fh , "<" , $self->{ cfg_dev_tunnels } 
+        or die "$self->{ cfg_dev_tunnels }, $!, $@ \n";
+
+    while ( my $line = <$fh> ) {
+        chomp $line;
+        my ( $local_port, $hostname, $remote_port, $jump_host, $pid, $alias ) = split( /\t/, $line );
+        $self->{ local_port }{ $local_port } = {
+            host => $hostname,
+            remote_port => $remote_port,
+            jump_host => $jump_host,
+            pid => $pid,
+            alias => $alias || undef,
+        };
+    }
+    close $fh;
+}
+
 
 1; # End of Necromancer

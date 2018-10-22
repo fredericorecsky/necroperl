@@ -29,6 +29,7 @@ GetOptions(
     "changed"       => \&enqueue_action,
     "remote"        => \&enqueue_action,
     "slurp"         => \&enqueue_action,
+    "run"           => \&enqueue_action,
     "perl=s"        => \$options->{ perl },
     "help"          => \&enqueue_action,
     "verbose"       => \$options->{ verbose },
