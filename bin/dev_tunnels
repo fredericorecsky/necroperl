@@ -15,8 +15,11 @@ use Getopt::Long;
 use Necromancer;
 use Term::ANSIColor;
 
-my %local_port;
-my ( $jump_host, $remote_host, $remote_port, $remote_command, $alias, $list );
+my ( 
+    $jump_host, $remote_host, $remote_port, 
+    $remote_command, $alias, $list, 
+    $up, $arg_local_port,
+);
 
 GetOptions ( 
     "jump_host=s"   => \$jump_host,
@@ -24,42 +27,49 @@ GetOptions (
     "port=s"        => \$remote_port,
     "alias=s"       => \$alias,
     "list"          => \$list,
+    "up=s"          => \$up,
+    "local_port=s"  => \$arg_local_port,
 );
 
 my $necro = Necromancer->new();
-load_tunnels();
+$necro->load_tunnels();
+
+my %local_port = %{ $necro->{ local_port } };
+
 list() if $list;
 
-die "jump_host, host and port are required arguments\n" 
-    if !( $jump_host && $remote_port && $remote_host );
+up() if $up;
 
+if ( !( $jump_host && $remote_port && $remote_host ) ) {
+    list();
+    exit();
+}
 
 $necro->check_host( $jump_host );
 
-
-my $count = 0;
 my $rand_port;
-while ( 1 ) {
-    $rand_port = (int rand(10000) + 2000 );
-    if (! exists $local_port{ $rand_port } ){
-        last;
-    }
-    $count++;
-    die "Could not find a free port\n" if $count > 10;
+if ( ! $arg_local_port ) {
+    my $count = 0;
+    while ( 1 ) {
+        $rand_port = (int rand(10000) + 2000 );
+        if (! exists $local_port{ $rand_port } ){
+            last;
+        }
+        $count++;
+        die "Could not find a free port\n" if $count > 10;
+    } 
+} else {
+    $rand_port = $arg_local_port;
 }
 
 fork and exit;
 
 open my $fh, ">>", $necro->{ cfg_dev_tunnels } or die;
-
     print $fh join "\t", $rand_port, $remote_host, $remote_port, $jump_host, $$, $alias;
     print $fh "\n";
-
 close $fh; 
 
-#my @cmd = ( 'ssh','-f','-N','-L', "$rand_port\:$remote_host\:$remote_port", $jump_host );
 my $cmd = "ssh -N -L $rand_port\:$remote_host\:$remote_port $jump_host";
-#my $cmd = "sleep 60";
 
 print "$$\n";
 exec $cmd;
@@ -75,14 +85,18 @@ sub load_tunnels {
                 remote_port => $remote_port,
                 jump_host => $jump_host,
                 pid => $pid,
-                alias => $alias || " ",
+                alias => $alias || undef,
             };
         }
     close $fh;
 }
 
+
+# Listing does garbage colection
+
 sub list {
         print join "\t", qw/
+            jump_host
             port
             hostname
             port
@@ -95,8 +109,13 @@ sub list {
                 print color( 'rgb335' );
             }else{
                 print color( 'rgb533' );
+                # we delete old entries
+                if ( ! $local_port{ $port }{ alias } ) {
+                    delete $local_port{ $port };
+                }
             }
-            print join "\t", $port,
+            print join "\t", $local_port{ $port }{ jump_host },
+                             $port,
                              $local_port{ $port }{ host },
                              $local_port{ $port }{ remote_port },
                              $local_port{ $port }{ pid },
@@ -106,3 +125,49 @@ sub list {
         }
         exit;
 }
+
+
+sub up {
+    for my $port ( keys %local_port ) {
+        next if $local_port{ $port }{ alias } ne $up;
+        fork and exit;
+        update_list(
+            $port,
+            $local_port{ $port }{ host },
+            $local_port{ $port }{ remote_port },
+            $local_port{ $port }{ jump_host },
+            $local_port{ $port }{ alias },
+        );
+        ssh_tunnel( 
+            $port,
+            $local_port{ $port }{ host },
+            $local_port{ $port }{ remote_port },
+            $local_port{ $port }{ jump_host },
+        );
+    }
+    die "Could not find the alias $up used before\n";
+}
+
+
+sub ssh_tunnel {
+    my ( $local_port, $remote_host, $remote_port, $jump_host ) = @_;
+
+    my $cmd = "ssh -N -L $local_port\:$remote_host\:$remote_port $jump_host";
+    exec $cmd;
+}
+
+sub update_list {
+    my ( $local_port, $remote_host, $remote_port, $jump_host, $alias ) = @_;
+
+    open my $fh, ">>", $necro->{ cfg_dev_tunnels } or die;
+        print $fh 
+            join "\t",  $local_port,
+                        $remote_host,
+                        $remote_port,
+                        $jump_host,
+                        $$,
+                        $alias,
+                        "\n";
+    close $fh; 
+}
+
