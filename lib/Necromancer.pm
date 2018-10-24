@@ -461,6 +461,7 @@ sub load_tunnels {
     open my $fh , "<" , $self->{ cfg_dev_tunnels } 
         or die "$self->{ cfg_dev_tunnels }, $!, $@ \n";
 
+    my $order = 0;
     while ( my $line = <$fh> ) {
         chomp $line;
         my ( $local_port, $hostname, $remote_port, $jump_host, $pid, $alias ) = split( /\t/, $line );
@@ -470,7 +471,9 @@ sub load_tunnels {
             jump_host => $jump_host,
             pid => $pid,
             alias => $alias || undef,
+            order => $order,
         };
+        $order ++;
     }
     close $fh;
 }

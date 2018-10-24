@@ -5,6 +5,7 @@ use warnings;
 
 use Cwd qw/abs_path cwd getcwd/;
 use File::Basename;
+use File::Copy;
 
 BEGIN {
     my $abs_path = dirname( dirname ( abs_path( $0 ) ) );
@@ -18,7 +19,7 @@ use Term::ANSIColor;
 my ( 
     $jump_host, $remote_host, $remote_port, 
     $remote_command, $alias, $list, 
-    $up, $arg_local_port,
+    $up, $arg_local_port, $all, $clean,
 );
 
 GetOptions ( 
@@ -27,6 +28,8 @@ GetOptions (
     "port=s"        => \$remote_port,
     "alias=s"       => \$alias,
     "list"          => \$list,
+    "all"           => \$all,
+    "clean"         => \$clean,
     "up=s"          => \$up,
     "local_port=s"  => \$arg_local_port,
 );
@@ -91,10 +94,10 @@ sub load_tunnels {
     close $fh;
 }
 
-
 # Listing does garbage colection
 
 sub list {
+
         print join "\t", qw/
             jump_host
             port
@@ -103,25 +106,61 @@ sub list {
             pid
             alias
         /, "\n";
-        for my $port ( keys %local_port ) {
+        
+        if ( $clean ) {
+            my $append = time();
+
+            move(
+                $necro->{ cfg_dev_tunnels }, 
+                $necro->{ cfg_dev_tunnels } . $append 
+            );
+        }
+
+        for my $port ( 
+        sort { $local_port{ $a }{ order } <=> $local_port{ $b }{order } 
+        } keys %local_port ) {
+
+            if ( ! defined $local_port{ $port } ){
+                delete $local_port{ $port };
+                next;
+            }
+
             my $status = "\x{2580}";
+            my $color;
+            $DB::single = 1;
             if ( kill 0, $local_port{ $port }{ pid } ) {
-                print color( 'rgb335' );
+                $color = color( 'rgb141' );
             }else{
-                print color( 'rgb533' );
-                # we delete old entries
-                if ( ! $local_port{ $port }{ alias } ) {
+                next if ! $all;
+                $color = color( 'rgb533' );
+                if ( $clean ) {
                     delete $local_port{ $port };
+                    next;
                 }
             }
-            print join "\t", $local_port{ $port }{ jump_host },
+            print join "\t", color( 'rgb334' ) .
+                             $local_port{ $port }{ jump_host } .
+                             $color,
                              $port,
-                             $local_port{ $port }{ host },
+                             sprintf( '%-40.40s', 
+                             $local_port{ $port }{ host }
+                             ),
                              $local_port{ $port }{ remote_port },
                              $local_port{ $port }{ pid },
-                             $local_port{ $port }{ alias };
+                             color( 'reset' ) .
+                             ( $local_port{ $port }{ alias } || "" );
             print color( 'reset' );
             print "\n";
+            if ( $clean ) {
+                update_list( 
+                    $port,
+                    $local_port{ $port }{ host },
+                    $local_port{ $port }{ remote_port },
+                    $local_port{ $port }{ jump_host },
+                    $local_port{ $port }{ pid },
+                    $local_port{ $port }{ alias },
+                );
+            }
         }
         exit;
 }
@@ -136,6 +175,7 @@ sub up {
             $local_port{ $port }{ host },
             $local_port{ $port }{ remote_port },
             $local_port{ $port }{ jump_host },
+            undef,
             $local_port{ $port }{ alias },
         );
         ssh_tunnel( 
@@ -157,7 +197,7 @@ sub ssh_tunnel {
 }
 
 sub update_list {
-    my ( $local_port, $remote_host, $remote_port, $jump_host, $alias ) = @_;
+    my ( $local_port, $remote_host, $remote_port, $jump_host, $pid, $alias ) = @_;
 
     open my $fh, ">>", $necro->{ cfg_dev_tunnels } or die;
         print $fh 
@@ -165,7 +205,7 @@ sub update_list {
                         $remote_host,
                         $remote_port,
                         $jump_host,
-                        $$,
+                        ( $pid || $$ ),
                         $alias,
                         "\n";
     close $fh; 
