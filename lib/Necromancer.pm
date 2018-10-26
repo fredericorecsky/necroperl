@@ -83,6 +83,10 @@ sub new {
 
     $self->{ perl } ||= "perl";
 
+    if ( $self->{ compile } ) {
+        $self->{ perl } .= " -c";
+    }
+
     $self->_input_file;
     $self->_remote_dir;
     $self->_git_top_level;
