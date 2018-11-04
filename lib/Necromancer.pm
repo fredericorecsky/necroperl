@@ -285,6 +285,7 @@ sub check_host {
     die "Requires a hostname\n" if ! $host;
    
     # todo check ssh config
+    # my $sshopts = '-o StrictHostKeyChecking=no';
     my $run = `ssh $host exit`;
 
     if ( $? ) {
