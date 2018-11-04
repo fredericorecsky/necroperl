@@ -70,7 +70,7 @@ sub host_dir {
 sub git_info {
     my $git_toplevel = `git rev-parse --show-toplevel 2>/dev/null`;
     if ( !$? ){
-        my ( $git_branch ) = `git rev-parse --abbrev-ref HEAD`; 
+        my ( $git_branch ) = `git rev-parse --abbrev-ref HEAD 2>/dev/null`; 
         $git_branch =~ s/\*\s+//;
         chomp $git_branch;
         my @remotes = `git remote -v`;
