@@ -20,7 +20,7 @@ my (
     $jump_host, $remote_host, $remote_port, 
     $remote_command, $alias, $list, 
     $up, $arg_local_port, $all, $clean,
-    $help,
+    $help, $filter
 );
 
 GetOptions ( 
@@ -34,6 +34,7 @@ GetOptions (
     "up=s"          => \$up,
     "local_port=s"  => \$arg_local_port,
     "help"          => \$help,
+    "filter=s"      => \$filter,
 );
 
 die <<EOF if $help;
@@ -131,6 +132,10 @@ sub list {
         for my $port ( 
         sort { $local_port{ $a }{ order } <=> $local_port{ $b }{order } 
         } keys %local_port ) {
+
+            if ( $filter and $local_port{ $port }{ alias } !~ /$filter/ ) {
+                next;
+            }
 
             if ( ! defined $local_port{ $port } ){
                 delete $local_port{ $port };
