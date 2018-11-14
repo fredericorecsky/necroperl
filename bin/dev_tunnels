@@ -20,6 +20,7 @@ my (
     $jump_host, $remote_host, $remote_port, 
     $remote_command, $alias, $list, 
     $up, $arg_local_port, $all, $clean,
+    $help,
 );
 
 GetOptions ( 
@@ -32,7 +33,12 @@ GetOptions (
     "clean"         => \$clean,
     "up=s"          => \$up,
     "local_port=s"  => \$arg_local_port,
+    "help"          => \$help,
 );
+
+die <<EOF if $help;
+dev_tunnels --jump_host <host> --host < destination host > --port < destination port > --alias < name >  [ --localport < local port > ]
+EOF
 
 my $necro = Necromancer->new();
 $necro->load_tunnels();
@@ -98,14 +104,20 @@ sub load_tunnels {
 
 sub list {
 
-        print join "\t", qw/
-            jump_host
-            port
-            hostname
-            port
-            pid
-            alias
-        /, "\n";
+        my $header = { '0' => 
+                        {
+                            remote_port => "remote_port",
+                            host        => "host",
+                            jump_host   => "jump_host",
+                            port        => "port",
+                            hostname    => "hostname",
+                            port        => "port",
+                            pid         => "pid",
+                            alias       => "alias",
+                        },
+        };
+
+        print_tunnel( 0, %{ $header } );
         
         if ( $clean ) {
             my $append = time();
@@ -126,31 +138,7 @@ sub list {
             }
 
             my $status = "\x{2580}";
-            my $color;
-            $DB::single = 1;
-            if ( kill 0, $local_port{ $port }{ pid } ) {
-                $color = color( 'rgb141' );
-            }else{
-                next if ! $all;
-                $color = color( 'rgb533' );
-                if ( $clean ) {
-                    delete $local_port{ $port };
-                    next;
-                }
-            }
-            print join "\t", color( 'rgb334' ) .
-                             $local_port{ $port }{ jump_host } .
-                             $color,
-                             $port,
-                             sprintf( '%-40.40s', 
-                             $local_port{ $port }{ host }
-                             ),
-                             $local_port{ $port }{ remote_port },
-                             $local_port{ $port }{ pid },
-                             color( 'reset' ) .
-                             ( $local_port{ $port }{ alias } || "" );
-            print color( 'reset' );
-            print "\n";
+            print_tunnel( $port, %local_port );
             if ( $clean ) {
                 update_list( 
                     $port,
@@ -163,6 +151,59 @@ sub list {
             }
         }
         exit;
+}
+
+sub print_tunnel {
+    my ( $port, %local_port ) = @_;
+    my ( $color, $status );
+
+    my %color_scheme = (
+        green => 'rgb141',
+        red   => 'rgb533',
+        blue  => 'rgb334',
+    );
+
+    if ( $port == 0 ) {
+        $status = 1;
+        %color_scheme = (
+            green => 'reset',
+            red   => 'reset',
+            blue  => 'reset',
+        );
+    }else {
+        eval {
+            $status = kill 0, $local_port{ $port }{ pid };
+        } or do {
+            $status = undef;
+        };
+    }
+    
+    if ( $status ) {
+        $color = color( $color_scheme{ green } );
+    }else{
+        return if ! $all;
+        $color = color( $color_scheme{ red } );
+        if ( $clean ) {
+            delete $local_port{ $port };
+            next;
+        }
+    }
+    print join "\t", color( $color_scheme{ blue } ) .
+                     sprintf( '%-12.12s', 
+                     $local_port{ $port }{ jump_host } 
+                     ).  $color,
+                     $port || "port",
+                     sprintf( '%-40.40s', 
+                     $local_port{ $port }{ host }
+                     ),
+                     sprintf( '%-12.12s', 
+                     $local_port{ $port }{ remote_port } || ""
+                     ),
+                     $local_port{ $port }{ pid },
+                     color( 'reset' ) .
+                     ( $local_port{ $port }{ alias } || "" );
+    print color( 'reset' );
+    print "\n";
 }
 
 
