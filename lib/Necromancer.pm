@@ -115,7 +115,6 @@ sub _write_cfg { }
 sub _input_file {
     my ( $self ) = @_;
 
-    $DB::single = 1;
     if ( ! $self->{ file } && $self->{ remote_args } && @{ $self->{ remote_args } } ) {
         if ( -e $self->{ remote_args }[0] ){
             ( $self->{ file } ) = shift @{ $self->{ remote_args } };
