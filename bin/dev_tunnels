@@ -81,7 +81,7 @@ close $fh;
 
 my $cmd = "ssh -N -L $rand_port\:$remote_host\:$remote_port $jump_host";
 
-print "$$\n";
+print "Tunnel to $remote_host @ $remote_port on 127.0.0.1:$rand_port\n";
 exec $cmd;
 
 
