@@ -316,7 +316,7 @@ sub host {
             print $fh $self->{ remote };
         close $fh;
 
-        print "Actual default remote host:  $self->{ remote } \n";
+        #print "Actual default remote host:  $self->{ remote } \n";
         $self->_load_cfg( 'remote', 'cfg_remote_host', "fatal" );
     }else {
         $self->_load_cfg( 'remote', 'cfg_remote_host' );
