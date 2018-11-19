@@ -6,6 +6,7 @@ use warnings;
 use Cwd qw/abs_path cwd getcwd/;
 use File::Basename;
 use File::Copy;
+use File::Spec;
 
 BEGIN {
     my $abs_path = dirname( dirname ( abs_path( $0 ) ) );
@@ -176,11 +177,7 @@ sub print_tunnel {
             blue  => 'reset',
         );
     }else {
-        eval {
-            $status = kill 0, $local_port{ $port }{ pid };
-        } or do {
-            $status = undef;
-        };
+        $status = process_is_tunnel( $local_port{ $port }{ pid } );
     }
     
     if ( $status ) {
@@ -256,4 +253,27 @@ sub update_list {
                         "\n";
     close $fh; 
 }
+
+sub process_is_tunnel {
+    my ( $pid ) = @_;
+
+    my $proc_file = File::Spec->catfile( '/', 'proc', $pid, 'exe' );
+
+    eval {
+        my $status = kill 0, $pid;
+        if ( ! -e $proc_file || ! $status ) {
+            return undef;
+        }
+        my $cmd_path = readlink $proc_file;
+        my $cmd = basename( $cmd_path );
+        if ( $cmd eq "ssh" ){
+            return 1;
+        }else {
+            return 0;
+        }
+    } or do {
+        return undef;
+    };
+}
+
 
