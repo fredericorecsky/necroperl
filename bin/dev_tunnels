@@ -21,7 +21,7 @@ my (
     $jump_host, $remote_host, $remote_port, 
     $remote_command, $alias, $list, 
     $up, $arg_local_port, $all, $clean,
-    $help, $filter
+    $help, $filter, $down
 );
 
 GetOptions ( 
@@ -33,6 +33,7 @@ GetOptions (
     "all"           => \$all,
     "clean"         => \$clean,
     "up=s"          => \$up,
+    "down=s"        => \$down,
     "local_port=s"  => \$arg_local_port,
     "help"          => \$help,
     "filter=s"      => \$filter,
@@ -40,6 +41,9 @@ GetOptions (
 
 die <<EOF if $help;
 dev_tunnels --jump_host <host> --host < destination host > --port < destination port > --alias < name >  [ --localport < local port > ]
+dev_tunnels --up <alias>
+dev_tunnels --up <alias> --local_port=<local port>
+dev_tunnels --down <alias>
 EOF
 
 my $necro = Necromancer->new();
@@ -50,6 +54,8 @@ my %local_port = %{ $necro->{ local_port } };
 list() if $list;
 
 up() if $up;
+
+down() if $down;
 
 if ( !( $jump_host && $remote_port && $remote_host ) ) {
     list();
@@ -212,6 +218,7 @@ sub print_tunnel {
 sub up {
     for my $port ( keys %local_port ) {
         next if $local_port{ $port }{ alias } ne $up;
+        next if $arg_local_port && ( $port != $arg_local_port );
         fork and exit;
         update_list(
             $port,
@@ -229,6 +236,15 @@ sub up {
         );
     }
     die "Could not find the alias $up used before\n";
+}
+
+sub down {
+    for my $port ( keys %local_port ) {
+        next if $local_port{ $port }{ alias } ne $down;
+        if (  $local_port{ $port }{ pid } ) {
+            kill 9, $local_port{ $port }{ pid }; 
+        }
+    }
 }
 
 
