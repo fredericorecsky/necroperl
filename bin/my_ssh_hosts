@@ -1,0 +1,38 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+
+use Getopt::Long;
+use Term::ANSIColor;
+
+my $filter;
+GetOptions (
+    "filter=s"  => \$filter,
+);
+
+
+my $default_ssh_config = "$ENV{ HOME }/.ssh/config";
+
+if ( ! -e $default_ssh_config ) {
+    print "$default_ssh_config does not exists\n";
+    exit;
+}
+
+open my $fh ,"<", $default_ssh_config or die "could not open $default_ssh_config\n";
+while( <$fh> ){
+    next if !/Host /;
+    chomp;
+    my @fields = split( /\s+/, $_ );
+    shift @fields;
+    my $host = pop @fields;
+    next if $filter && $host !~ /$filter/;
+    $fields[2] ||= "";
+    print join( " ",
+          ( map { 
+            ( color( 'bold white' ) . sprintf( '%-15.15s', $_ ? $_ : "." ) . color( 'reset' ) )
+          } @fields ), 
+          ( ": [" . color( 'rgb335' ) . $host . color( 'reset' ) .  "]" ), "\n" );
+}
