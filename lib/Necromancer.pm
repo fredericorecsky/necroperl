@@ -203,9 +203,12 @@ sub _git_top_level {
                 length( dirname( $self->{ git_tree } )),
             );
         $self->{ run_file } = basename( $self->{ file } );
+        # generic remote perl5lib
+        $self->{ remote_p5lib } = File::Spec->catdir( $self->{ remote_dir }, basename( $self->{ git_tree } ), 'lib' );
     }else{
         $self->{ run_path } = $self->{ cwd };
         $self->{ run_file } = $self->{ file };
+        $self->{ remote_p5lib } = File::Spec->catdir( $self->{ git_tree }, 'lib' );
     }
 
     chdir $self->{ cwd };
@@ -396,7 +399,7 @@ sub rperl {
                 'echo -n;'
             )
         ),
-        "export PERL5LIB=$self->{ run_path }/lib:\$PERL5LIB ;", 
+        "export PERL5LIB=$self->{ remote_p5lib }\:$self->{ run_path }/lib:\$PERL5LIB ;", 
         'cd', $self->{ run_path }, ';',
         $self->{ perl }, $self->{ run_file },  @{ $self->{ remote_args } }, ';', 
         'pgrep -P $RPERL_PID;',
