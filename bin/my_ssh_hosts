@@ -9,30 +9,109 @@ use Getopt::Long;
 use Term::ANSIColor;
 
 my $filter;
+my $dump;
+
 GetOptions (
     "filter=s"  => \$filter,
+    "dump"      => \$dump,
 );
 
+print "Filter: $filter\n" if $filter;
 
-my $default_ssh_config = "$ENV{ HOME }/.ssh/config";
+my @ssh_keywords = qw/
+    ForwardAgent
+    Hostname
+    User
+    ServerAliveInterval
+    ForwardX11
+    HashKnownHosts
+    ProxyCommand
+/;
 
-if ( ! -e $default_ssh_config ) {
-    print "$default_ssh_config does not exists\n";
-    exit;
+my %ssh_tokens = (
+    host                => \&host,
+    Host                => \&host,
+);
+
+for my $keyword ( @ssh_keywords ) {
+    $ssh_tokens{ $keyword } = lvalue( $keyword );
 }
 
-open my $fh ,"<", $default_ssh_config or die "could not open $default_ssh_config\n";
-while( <$fh> ){
-    next if !/Host /;
-    chomp;
-    my @fields = split( /\s+/, $_ );
-    shift @fields;
-    my $host = pop @fields;
-    next if $filter && $host !~ /$filter/;
-    $fields[2] ||= "";
-    print join( " ",
-          ( map { 
-            ( color( 'bold white' ) . sprintf( '%-15.15s', $_ ? $_ : "." ) . color( 'reset' ) )
-          } @fields ), 
-          ( ": [" . color( 'rgb335' ) . $host . color( 'reset' ) .  "]" ), "\n" );
+my $ssh_config = parse( "$ENV{ HOME }/.ssh/config" );
+
+$ssh_config->show_hosts();
+
+print Dumper $ssh_config if $dump;
+
+sub parse {
+    my ( $default_ssh_config ) = @_;
+    if ( ! -e $default_ssh_config ) {
+        print "$default_ssh_config does not exists\n";
+        exit;
+    }
+    open my $fh ,"<", $default_ssh_config or die "could not open $default_ssh_config\n";
+    my $ssh_config = bless {};
+    while( my $line = <$fh> ){
+        chomp $line;
+        $line =~ s/^(\s+)//;
+        my @tokens = split( /\s+/, $line );
+        next if ! @tokens;
+        my $keyword = $tokens[0];
+        if ( $keyword && exists $ssh_tokens{ $keyword } ) {
+            $ssh_tokens{ $keyword }->( $ssh_config, @tokens );
+        }
+    }
+    close $fh;
+    return $ssh_config;
+}
+
+sub show_hosts {
+    my ( $ssh_config ) = @_;
+
+    if( exists $ssh_config->{ hosts } ) {
+        for my $host ( keys %{ $ssh_config->{ hosts } } ) {
+            for my $alias ( @{ $ssh_config->{ hosts }{ $host }{ alias } } ){
+                next if ( $filter && $alias !~ /$filter/ );
+                print color( 'rgb335' );
+                print sprintf( '%-15.15s', $alias );
+                print color( 'white' );
+                print "\t$host\n"
+            }
+        }
+    }
+}
+
+sub host {
+    my ( $ssh_config, @tokens ) = @_;
+
+    shift @tokens;
+    my $hostname = pop @tokens;
+    $ssh_config->{ hosts }{ $hostname } = {
+        alias => [ @tokens ],
+    };
+    $ssh_config->{ _actual_host } = $hostname;
+}
+
+sub _actual_host {
+    my ( $ssh_config ) = @_;
+    die "error parsing ssh config file\n" if !$ssh_config->{ _actual_host };
+}
+
+sub lvalue {
+    my ( $name ) = @_;
+    return sub {
+        my ( $self, @tokens ) = @_;
+        $self->_lvalue( $name ,  @tokens );
+    }
+}
+
+sub forwardagent {
+    my ( $ssh_config, @tokens ) = @_;
+    $_[0]->_lvalue( 'ForwardAgent' , @tokens );
+}
+
+sub _lvalue {
+    my ( $ssh_config, $key, @tokens ) = @_;
+    $ssh_config->_actual_host();
+    $ssh_config->{ hosts }{ $ssh_config->{ _actual_host } }{ $key } = join ' ', @tokens;
 }
