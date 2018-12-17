@@ -64,7 +64,7 @@ if ( !( $jump_host && $remote_port && $remote_host ) ) {
     exit();
 }
 
-$necro->check_host( $jump_host );
+die "$jump_host offline or not configured on ssh config\n" if ( ! $necro->check_host( $jump_host ) );
 
 my $rand_port;
 if ( ! $arg_local_port ) {
