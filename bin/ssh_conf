@@ -4,16 +4,29 @@ use strict;
 use warnings;
 
 use Data::Dumper;
+use Cwd qw/abs_path cwd getcwd/;
+use File::Basename;
 
 use Getopt::Long;
 use Term::ANSIColor;
 
+BEGIN {
+    my $abs_path = dirname( dirname ( abs_path( $0 ) ) );
+    push @INC, $abs_path . "/lib";
+}
+
+use Necromancer;
+
+my $necro = Necromancer->new();
+
 my $filter;
 my $dump;
+my $options = { };
 
 GetOptions (
     "filter=s"  => \$filter,
     "dump"      => \$dump,
+    "test"      => \$options->{ mark_online_hosts },
 );
 
 print "Filter: $filter\n" if $filter;
@@ -38,6 +51,10 @@ for my $keyword ( @ssh_keywords ) {
 }
 
 my $ssh_config = parse( "$ENV{ HOME }/.ssh/config" );
+
+for my $option ( keys %{ $options } ) {
+    $ssh_config->$option() if $options->{ $option };
+}
 
 $ssh_config->show_hosts();
 
@@ -72,10 +89,27 @@ sub show_hosts {
         for my $host ( keys %{ $ssh_config->{ hosts } } ) {
             for my $alias ( @{ $ssh_config->{ hosts }{ $host }{ alias } } ){
                 next if ( $filter && $alias !~ /$filter/ );
-                print color( 'rgb335' );
+                print $ssh_config->{ hosts }{ $host }{ _online } ?
+                    color( 'rgb252' ) :
+                    color( 'rgb335' ) ;
                 print sprintf( '%-15.15s', $alias );
                 print color( 'white' );
                 print "\t$host\n"
+            }
+        }
+    }
+}
+
+sub mark_online_hosts {
+    my ( $ssh_config ) = @_;
+    if ( exists $ssh_config->{ hosts } ) {
+        for my $host ( keys %{ $ssh_config->{ hosts } } ) {
+            # must have an alias
+            if ( @{ $ssh_config->{ hosts }{ $host }{ alias } } ){
+                my $alias = $ssh_config->{ hosts }{ $host }{ alias }[0];
+                if( $necro->check_host( $alias ) ) {
+                    $ssh_config->{ hosts }{ $host }{ _online } = 1;
+                }
             }
         }
     }
