@@ -288,14 +288,15 @@ sub check_host {
    
     # todo check ssh config
     # my $sshopts = '-o StrictHostKeyChecking=no';
-    my $run = `ssh $host exit`;
+    my $run = `ssh $host -oConnectTimeout=1 -oBatchMode=yes -q exit`;
 
     if ( $? ) {
-        die <<EOF;
+        warn <<EOF if $self->{ __underscore };
     The host: $host is offline or not configured on 
     ssh config file. Please check your ssh config on 
     $ENV{HOME}/.ssh/config.
 EOF
+        return 0;
     }else{
         return 1;
     }
