@@ -25,46 +25,67 @@ my ( $status ) = @ARGV;
 
 my $necro = Necromancer->new();
 
-status();
-host_dir();
-git_info();
-rperl();
+my %unicode = (
+    proxy   => "\x{2638}",
+    cloud   => "\x{2601}",
+    local   => "\x{2602}",
+    #star    => "\x{2605}",
+    star    => "\x{2739}",
+    error   => "\x{2716}",
+    ok      => "\x{2714}",
+    block   => "\x{220E}",
+    storage => "\x{26C1}",
+    connect => "\x{260D}",
+    left    => "\x{276A}",
+    right   => "\x{276B}",
+    git     => "\x{26C0}",
+    1       => "\x{2460}",
+    2       => "\x{2461}",
+    3       => "\x{2462}",
+    4       => "\x{2463}",
+    5       => "\x{2464}",
+    6       => "\x{2465}",
+    7       => "\x{2466}",
+    8       => "\x{2467}",
+    9       => "\x{2468}",
+    10      => "\x{2469}",
+);
 print "\n";
-print "\x{2605} :"; # does not work for some fonts
+host_dir();
+print " [";
+    proxy_info();
+    rperl();
+    git_info();
+print "]\n";
+status();
+print " :";
 
 sub status { 
-    print "[";
     if ( $status ) {
-        #print color( 'red' );
         print color( 'rgb511' );
-        #print " \x{1f615} "; # does not work for some fonts
-        print "\x{2580}"; # does not work for some fonts
+        print $unicode{ error };
         print "$status";
     }else{
-        #print color( 'green' );
         print color( 'rgb353' );
-        #print "\x{270C}"; # does not work for some fonts
-        print "\x{2580}"; # does not work for some fonts
-        print " ok ";
+        print $unicode{ ok };
     }
     print color('reset' );
-    print "]"
 }
 
 sub host_dir {
     my $hostname = hostname();
     my $cwd = getcwd();
     my $ssh = ( $ENV{SSH_CLIENT} || $ENV{ SSH_TTY } ) ? 1 : 0;
-    print "[";
-    $ssh ? print color( 'on_blue' ) : print color( 'rgb335' );
-    print $hostname . ":";
+    print color( 'rgb335' );
+    print $unicode{ storage };
+    print $unicode{ cloud } if $ssh;
+    print $hostname . ":" if ( $necro->{ _show_localhost } || $ssh );
     print color( 'reset' );
     if ( $cwd =~ /^$ENV{ HOME }(.*)/ ) {
         print "~$1";
     }else{
         print $cwd;
     }
-    print "]";
 }
 
 sub git_info {
@@ -79,26 +100,41 @@ sub git_info {
             my ( $name, $server ) = split ( /\s/, $remote );
             $origin = basename $server;
         }
-        print "[";
         print color( 'magenta' );
-        print $origin ? "$origin:" : ":" ;
+        print $unicode{ git };
+        print $origin ? " $origin:" : " :" ;
         print color( 'cyan' );
         print "$git_branch";
         print color( 'reset' );
-        print "]";
     }
+}
+
+sub proxy_info {
+    $necro->{ proxy_vars } = {
+        http_proxy      => $ENV{ http_proxy },
+        https_proxy     => $ENV{ https_proxy },
+        HTTP_PROXY      => $ENV{ HTTP_PROXY },
+        HTTPS_PROXY     => $ENV{ HTTPS_PROXY },
+    };
+
+    for my $var ( values %{ $necro->{ proxy_vars } } ) {
+        $necro->{ proxy_active } ++ if $var;
+    }
+
+    if( $necro->{ proxy_active } ) {
+        print color( 'rgb552');
+        print " $unicode{ proxy } ";
+        print color( 'reset' );
+    }
+    
 }
 
 # TODO move to rperl
 sub rperl {
     if ( $necro->{ remote } ) {
-        print "[@";
         print color( 'rgb335' );
-        print $necro->{ remote };
+        print " $unicode{ cloud }$necro->{ remote } ";
         print color( 'reset' );
-        print "]";
-    }else{
-        print "[@]";
     }
 }
 
