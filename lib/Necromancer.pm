@@ -199,16 +199,20 @@ sub _git_top_level {
         $self->{ run_path } =
             $self->{ remote_dir } .
             substr(
-                dirname( $self->{ file_abs_path } ),
+                $self->{ dir_abs_path },
                 length( dirname( $self->{ git_tree } )),
             );
         $self->{ run_file } = basename( $self->{ file } );
         # generic remote perl5lib
-        $self->{ remote_p5lib } = File::Spec->catdir( $self->{ remote_dir }, basename( $self->{ git_tree } ), 'lib' );
+        $self->{ remote_p5lib } = join ":", 
+            $ENV{ PERL5LIB },
+            File::Spec->catdir( $self->{ remote_dir }, basename( $self->{ git_tree } ), 'lib' );
     }else{
         $self->{ run_path } = $self->{ cwd };
         $self->{ run_file } = $self->{ file };
-        $self->{ remote_p5lib } = File::Spec->catdir( $self->{ git_tree }, 'lib' );
+        $self->{ remote_p5lib } = join ":", 
+            $ENV{ PERL5LIB }, 
+            File::Spec->catdir( $self->{ git_tree }, 'lib' );
     }
 
     chdir $self->{ cwd };
@@ -390,6 +394,29 @@ sub rperl {
 
     $self->{ io_sync } = 1;
 
+    # thisdir  modify run path to allow use "sub commands perl"
+    # 
+    # Mainly to allow web frameworks ( you call the framework script
+    # inside your project dir, so he will sync both and will call
+    # on the server side )
+    # will call necroperl for the current cwd
+
+    if ( $self->{ thisdir } ) {
+        my $subproject = Necromancer->new({
+            file => $self->{ cwd },
+        });
+
+        print "Syncing actual directory\n";
+        $subproject->_rsync();
+        $subproject->config();
+        # dump config
+
+        # change the run_path 
+
+        $self->{ run_file } = File::Spec->catdir( $self->{ run_path }, $self->{ run_file } ); 
+        $self->{ run_path } = $subproject->{ run_path };
+    }
+
     my @cmd = (
         'ssh', $self->{ remote }, 
         'export RPERL_PID=$$;', 
@@ -400,7 +427,8 @@ sub rperl {
                 'echo -n;'
             )
         ),
-        "export PERL5LIB=$self->{ remote_p5lib }\:$self->{ run_path }/lib:\$PERL5LIB ;", 
+        #"export PERL5LIB=\$PERL5LIB\:$self->{ remote_p5lib }\:$self->{ run_path }/lib;", 
+        "export PERL5LIB=$self->{ remote_p5lib }\:$self->{ run_path }/lib;", 
         'cd', $self->{ run_path }, ';',
         $self->{ perl }, $self->{ run_file },  @{ $self->{ remote_args } }, ';', 
         'pgrep -P $RPERL_PID;',
