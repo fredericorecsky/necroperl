@@ -76,8 +76,9 @@ sub host_dir {
     my $hostname = hostname();
     my $cwd = getcwd();
     my $ssh = ( $ENV{SSH_CLIENT} || $ENV{ SSH_TTY } ) ? 1 : 0;
-    print color( 'rgb335' );
+    print color( 'reset' );
     print $unicode{ storage };
+    print color( 'rgb335' );
     print $unicode{ cloud } if $ssh;
     print $hostname . ":" if ( $necro->{ _show_localhost } || $ssh );
     print color( 'reset' );
