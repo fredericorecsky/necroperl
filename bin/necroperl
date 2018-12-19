@@ -22,6 +22,7 @@ my @run_actions;
 GetOptions( 
     "file=s"        => \$options->{ file },
     "config"        => \&enqueue_action,
+    "thisdir"       => \$options->{ thisdir },
     "host=s"        => \&enqueue_action,
     "remote_dir:s"  => \&enqueue_action,
     "dep"           => \&enqueue_action,
