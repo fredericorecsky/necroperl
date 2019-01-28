@@ -1,10 +1,16 @@
 = necroperl 
 
+== installing
+
+
+
+== About
+
 Necroperl is a set of scripts that I build to help myself when
 developing perl code on a new environment. 
 
-Usually I develop to run the code on whatever remote computer
-but I *prefer* develop locally as much as I can. The workflow is
+Usually I develop  the code to run on whatever remote computer
+but I *prefer* edit it locally as much as I can. The workflow is
 like this:
 
 * on my home dir on my machine assembly all files necessary
