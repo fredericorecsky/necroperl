@@ -2,7 +2,7 @@
 
 == installing
 
-
+curl -L https://raw.githubusercontent.com/fredericorecsky/necroperl/master/bin/install_necroperl | sh
 
 == About
 

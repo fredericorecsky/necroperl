@@ -24,22 +24,22 @@ if [ -z "${GITHUBDIR}" ];then
     GITHUBDIR=~/github
 fi
 
+echo "Installing necroperl"
+
 if [ ! -d $GITHUBDIR ];then
     mkdir -p $GITHUBDIR
 fi
 
 cd $GITHUBDIR
 if [ $? -eq 0 ];then 
-    if [ ! -d "configs" ];then 
-        git clone $NECROPERL_URL
-        if [ $? -ne 0 ];then
-            echo "could not clone $NECROPERL_URL"
-            echo "verify your internet connection settings"
-            exit 1;
-        fi
+    git clone $NECROPERL_URL
+    if [ $? -ne 0 ];then
+        echo "could not clone $NECROPERL_URL"
+        echo "verify your internet connection settings"
+        exit 1;
     fi
 else
-    echo "Could not change to github dir"
+    echo "Could not change to github dir $GITHUBDIR"
     exit 1;
 fi
 
