@@ -319,6 +319,11 @@ sub host {
         $self->{ remote } = $remote;
     }
 
+    if ( exists $ENV{ NECROHOST } ) {
+        $self->{ remote } = $ENV{ NECROHOST };
+        return $self->{ remote };
+    }
+
     if ( $self->{ remote } && $self->check_host( $self->{ remote } ) ) {
         open my $fh, ">", $self->{ cfg_remote_host } or die "$@\n";
             print $fh $self->{ remote };
