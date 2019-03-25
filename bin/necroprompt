@@ -51,20 +51,21 @@ my %unicode = (
     10      => "\x{2469}",
 );
 print "\n";
+status();
+print " ";
 host_dir();
 print " [";
     proxy_info();
     rperl();
     git_info();
 print "]\n";
-status();
 print " :";
 
 sub status { 
     if ( $status ) {
         print color( 'rgb511' );
         print $unicode{ error };
-        print "$status";
+        print " $status ";
     }else{
         print color( 'rgb353' );
         print $unicode{ ok };
@@ -77,10 +78,10 @@ sub host_dir {
     my $cwd = getcwd();
     my $ssh = ( $ENV{SSH_CLIENT} || $ENV{ SSH_TTY } ) ? 1 : 0;
     print color( 'reset' );
-    print $unicode{ storage };
+    print " $unicode{ storage } ";
     print color( 'rgb335' );
-    print $unicode{ cloud } if $ssh;
-    print $hostname . ":" if ( $necro->{ _show_localhost } || $ssh );
+    print " $unicode{ cloud } " if $ssh;
+    print " $hostname: " if ( $necro->{ _show_localhost } || $ssh );
     print color( 'reset' );
     if ( $cwd =~ /^$ENV{ HOME }(.*)/ ) {
         print "~$1";

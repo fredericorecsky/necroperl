@@ -9,7 +9,7 @@ use File::Basename;
 use IPC::Open3;
 use IO::Select;
 use Module::CoreList;
-use Module::ScanDeps;
+#use Module::ScanDeps;
 use Symbol 'gensym';
 use Sys::Hostname;
 
@@ -231,6 +231,9 @@ sub _git_modified_files {
 
 sub _dependencies {
     my ( $self ) = @_;
+
+    require Module::ScanDeps;
+    Module::ScanDeps->import();
 
     my $dependencies = scan_deps(
         files => [ $self->{ file_abs_path } ],
