@@ -6,6 +6,7 @@ use warnings;
 use Cwd qw/abs_path cwd getcwd/;
 use Data::Dumper;
 use File::Basename;
+use File::Spec;
 use IPC::Open3;
 use IO::Select;
 use Module::CoreList;
@@ -211,7 +212,7 @@ sub _git_top_level {
         $self->{ run_path } = $self->{ cwd };
         $self->{ run_file } = $self->{ file };
         $self->{ remote_p5lib } = join ":", 
-            $ENV{ PERL5LIB }, 
+            ( $ENV{ PERL5LIB } ? $ENV{ PERL5LIB} : "" ), 
             File::Spec->catdir( $self->{ git_tree }, 'lib' );
     }
 
