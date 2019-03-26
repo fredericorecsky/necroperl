@@ -1,5 +1,9 @@
 # necroperl 
 
+## Build Status
+
+[![Build Status](https://travis-ci.org/fredericorecsky/necroperl.svg?branch=master)](https://travis-ci.org/fredericorecsky/necroperl)
+
 ## installing
 
 curl -L https://raw.githubusercontent.com/fredericorecsky/necroperl/master/bin/install_necroperl | sh
