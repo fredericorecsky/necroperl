@@ -1,0 +1,19 @@
+language: perl
+perl: 
+    - "5.28"
+    - "5.26"
+    - "5.24"
+    - "5.22"
+    - "5.20"
+    - "5.18"
+
+script:
+    - prove -R t
+
+notifications:
+    recipients:
+        - c@frederico.me
+    email:
+        on_success: change
+        on_failure: always
+
