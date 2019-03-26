@@ -1,10 +1,10 @@
-= necroperl 
+# necroperl 
 
-== installing
+## installing
 
 curl -L https://raw.githubusercontent.com/fredericorecsky/necroperl/master/bin/install_necroperl | sh
 
-== About
+## About
 
 Necroperl is a set of scripts that I build to help myself when
 developing perl code on a new environment. 
@@ -19,7 +19,7 @@ connection that is required.
 * assembly a bunch of ssh tunnels
 * work locally
 
-== So what each tool does?
+## So what each tool does?
 
 necroperl ->  runs the program on remote server, slurp the IO and 
 show on my local terminal.
