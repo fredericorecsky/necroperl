@@ -7,8 +7,11 @@ perl:
     - "5.20"
     - "5.18"
 
+install: 
+    - cpanm -v --installdeps --notest .
+
 script:
-    - prove -R t
+    - prove -r t
 
 notifications:
     recipients:
