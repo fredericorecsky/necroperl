@@ -51,7 +51,7 @@ EOF
 my $necro = Necromancer->new();
 $necro->load_tunnels();
 
-my %local_port = %{ $necro->{ local_port } };
+my %local_port = $necro->{ local_port } ? %{ $necro->{ local_port } } :();
 
 list() if $list;
 
@@ -279,6 +279,7 @@ sub update_list {
 sub process_is_tunnel {
     my ( $pid ) = @_;
 
+    # TODO mac os does not have proc
     my $proc_file = File::Spec->catfile( '/', 'proc', $pid, 'exe' );
 
     eval {
