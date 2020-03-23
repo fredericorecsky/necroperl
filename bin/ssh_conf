@@ -86,7 +86,7 @@ sub show_hosts {
     my ( $ssh_config ) = @_;
 
     if( exists $ssh_config->{ hosts } ) {
-        for my $host ( keys %{ $ssh_config->{ hosts } } ) {
+        for my $host ( sort { $a cmp $b } keys %{ $ssh_config->{ hosts } } ) {
             for my $alias ( @{ $ssh_config->{ hosts }{ $host }{ alias } } ){
                 next if ( $filter && $alias !~ /$filter/ );
                 print $ssh_config->{ hosts }{ $host }{ _online } ?
