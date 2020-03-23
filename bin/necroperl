@@ -20,6 +20,9 @@ my $options;
 my @run_actions;
 
 GetOptions( 
+    "raise=s"       => \&enqueue_action,
+    "sync_up"       => \&enqueue_action,
+    "sync_down"     => \&enqueue_action,
     "file=s"        => \$options->{ file },
     "config"        => \&enqueue_action,
     "thisdir"       => \$options->{ thisdir },
@@ -68,6 +71,11 @@ sub enqueue_action {
     }
     if ( $getopt->{ name } eq "remote_dir" ){
         $options->{ remote_dir } = $value;
+    }
+
+    # TODO dispatch for this one
+    if ( $getopt->{ name } eq "raise" ){
+        $options->{ raise_url } = $value;
     }
 }
 

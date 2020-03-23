@@ -3,6 +3,8 @@ package Necromancer;
 use strict;
 use warnings;
 
+use v5.24;
+
 use Cwd qw/abs_path cwd getcwd/;
 use Data::Dumper;
 use File::Basename;
@@ -10,9 +12,11 @@ use File::Spec;
 use IPC::Open3;
 use IO::Select;
 use Module::CoreList;
-#use Module::ScanDeps;
 use Symbol 'gensym';
 use Sys::Hostname;
+use URI;
+
+use Messages qw/msg_text/;
 
 =head1 NAME
 
@@ -523,5 +527,70 @@ sub load_tunnels {
     close $fh;
 }
 
+sub _rsync_full {
+    my ( $self, $source, $destiny )  = @_;
 
-1; # End of Necromancer
+    $destiny ||= ".";
+
+    my $sync_cmd = "rsync -a --delete --exclude '.necroperl' $source $destiny";
+    say $sync_cmd if $self->{ verbose };
+
+    my $sync = qx/$sync_cmd/;
+    if ( $? ) {
+        die "$?\nError when syncing $source \n";
+    }else{
+        say "Synced local $source" if $self->{ verbose };
+    }
+}
+
+# Gets a directory on a remote machine and download it locally 
+# Parameter is full qualified name  
+
+sub raise {
+    my ( $self ) = @_; 
+
+    my $path = basename $self->{ raise_url };
+
+    if ( -e $path ) {
+        say "$path exists at " . $path;
+    } else {
+        say "preparing to sync $path";
+        $self->_rsync_full( $self->{ raise_url } );
+        open my $fh, ">", $path . "/" . ".necroperl";
+        print $fh $self->{ raise_url } . "/";
+        close $fh;  
+    }
+}
+
+sub sync_up {
+    my ( $self ) = @_;
+
+    if ( -e ".necroperl" ){
+        open my $fh, "<", ".necroperl";
+            my $destiny = <$fh>;
+        close $fh;
+        say "syncing: $destiny";
+        $self->_rsync_full( ".", $destiny );
+    }else{
+        say "This directory is not synced using necroperl";
+    }
+}
+
+sub sync_down {
+    my ( $self ) = @_;
+
+    if ( -e ".necroperl" ){
+        open my $fh, "<", ".necroperl";
+            my $destiny = <$fh>;
+            chomp $destiny;
+        close $fh;
+        say "syncing: $destiny";
+        $self->_rsync_full( $destiny, "." );
+    }else{
+        say "This directory is not synced using necroperl";
+    }    
+}
+
+1; 
+
+# End of Necromancer
